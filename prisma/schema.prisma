@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       String          @id @default(cuid())
+  email    String          @unique
+  sessions Session[]
+  users    WorkspaceUser[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  expiresAt DateTime
+  user      User     @relation(references: [id], fields: [userId], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Verification {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  email     String
+  expiresAt DateTime
+
+  @@map("verifications")
+}
+
+model Workspace {
+  id   String @id @default(cuid())
+  name String
+  slug String @unique
+
+  users   WorkspaceUser[]
+  invites WorkspaceInvite[]
+
+  @@map("workspaces")
+}
+
+enum Role {
+  admin
+  member
+}
+
+model WorkspaceUser {
+  id          String    @id @default(cuid())
+  role        Role      @default(member)
+  userId      String
+  workspaceId String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([workspaceId])
+  @@map("workspace_users")
+}
+
+model WorkspaceInvite {
+  id          String    @id @default(cuid())
+  email       String
+  role        Role
+  expiresAt   DateTime
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@unique([email, workspaceId])
+  @@index([workspaceId])
+  @@map("workspace_invites")
+}
